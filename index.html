@@ -113,6 +113,9 @@
         window.addEventListener("resize", fit);
       }
 
+      // The game draws its grass with GPU buffers that only WebGPU has on the web.
+      if (!navigator.gpu) unityShowBanner("This game needs a browser with WebGPU: a recent Chrome, Edge or Safari.", "error");
+
       document.querySelector("#unity-loading-bar").style.display = "block";
 
       var script = document.createElement("script");
