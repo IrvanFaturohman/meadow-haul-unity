@@ -55,7 +55,9 @@
       var loaderUrl = buildUrl + "/WebGL.loader.js";
       var config = {
         arguments: [],
-        dataUrl: buildUrl + "/WebGL.data",
+        // Two data files from the same build: phones get ASTC textures, desktops DXT (WebGPU
+        // has no software fallback for a format the GPU lacks).
+        dataUrl: buildUrl + (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? "/WebGL.astc.data" : "/WebGL.data"),
         frameworkUrl: buildUrl + "/WebGL.framework.js",
         codeUrl: buildUrl + "/WebGL.wasm",
         streamingAssetsUrl: "StreamingAssets",
