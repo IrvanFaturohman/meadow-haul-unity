@@ -23,7 +23,40 @@
         <div id="unity-build-title">Meadow Haul</div>
       </div>
     </div>
+    <pre id="debug-log" style="display:none; position:fixed; left:0; right:0; top:0; max-height:60%; overflow:auto; margin:0; padding:8px; background:rgba(0,0,0,0.82); color:#cfe; font:11px/1.35 monospace; white-space:pre-wrap; word-break:break-word; z-index:1000;"></pre>
     <script>
+      // Open the page with #log to see the game's console on screen (for phones, which have no
+      // developer tools at hand): GPU and device facts first, then every log, warning and error.
+      (function () {
+        if (location.hash !== "#log") return;
+        var box = document.getElementById("debug-log");
+        box.style.display = "block";
+        function add(kind, args) {
+          var text = Array.prototype.map.call(args, function (a) {
+            try { return typeof a === "string" ? a : (a && a.stack) || JSON.stringify(a); } catch (e) { return String(a); }
+          }).join(" ");
+          box.textContent += "[" + kind + "] " + text + "\n";
+          if (box.textContent.length > 60000) box.textContent = box.textContent.slice(-50000);
+          box.scrollTop = box.scrollHeight;
+        }
+        ["log", "info", "warn", "error"].forEach(function (k) {
+          var orig = console[k];
+          console[k] = function () { add(k, arguments); orig.apply(console, arguments); };
+        });
+        window.addEventListener("error", function (e) { add("onerror", [e.message + " @" + e.filename + ":" + e.lineno]); });
+        window.addEventListener("unhandledrejection", function (e) { add("rejection", [e.reason]); });
+        add("info", ["UA " + navigator.userAgent, "screen " + screen.width + "x" + screen.height + " dpr " + devicePixelRatio]);
+        if (navigator.gpu) {
+          navigator.gpu.requestAdapter().then(function (a) {
+            if (!a) { add("gpu", ["no WebGPU adapter"]); return; }
+            var f = []; a.features.forEach(function (x) { f.push(x); });
+            add("gpu", ["features: " + f.join(", ")]);
+            var l = a.limits;
+            add("gpu", ["limits: storageBuffersPerStage " + l.maxStorageBuffersPerShaderStage + ", storageBuffersInVertex " + l.maxStorageBuffersInVertexStage + ", storageBufferSize " + l.maxStorageBufferBindingSize + ", textureDim2D " + l.maxTextureDimension2D]);
+            if (a.info) add("gpu", ["adapter: " + a.info.vendor + " " + a.info.architecture + " " + a.info.device + " " + a.info.description]);
+          });
+        } else add("gpu", ["navigator.gpu missing"]);
+      })();
       var canvas = document.querySelector("#unity-canvas");
 
       // Shows a temporary message banner/ribbon for a few seconds, or
