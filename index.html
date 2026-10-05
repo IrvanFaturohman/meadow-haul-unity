@@ -31,13 +31,21 @@
         if (location.hash !== "#log") return;
         var box = document.getElementById("debug-log");
         box.style.display = "block";
+        // Each distinct message once, in the order it first came, with how often it repeated, so
+        // the first error stays at the top instead of scrolling away under its repeats.
+        var order = [], counts = {}, pending = false;
+        function render() {
+          pending = false;
+          box.textContent = order.map(function (m) { return (counts[m] > 1 ? "(x" + counts[m] + ") " : "") + m; }).join("\n");
+        }
         function add(kind, args) {
           var text = Array.prototype.map.call(args, function (a) {
             try { return typeof a === "string" ? a : (a && a.stack) || JSON.stringify(a); } catch (e) { return String(a); }
           }).join(" ");
-          box.textContent += "[" + kind + "] " + text + "\n";
-          if (box.textContent.length > 60000) box.textContent = box.textContent.slice(-50000);
-          box.scrollTop = box.scrollHeight;
+          var m = "[" + kind + "] " + text.slice(0, 600);
+          if (!(m in counts)) { counts[m] = 0; if (order.length < 200) order.push(m); }
+          counts[m]++;
+          if (!pending) { pending = true; setTimeout(render, 250); }
         }
         ["log", "info", "warn", "error"].forEach(function (k) {
           var orig = console[k];
